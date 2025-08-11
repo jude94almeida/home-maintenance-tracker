@@ -54,74 +54,118 @@ export default function EquipmentListScreen({ navigation }) {
     }
   };
 
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Equipment</Text>
-
-      <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowModal(true)}>
-        <Text style={styles.primaryBtnText}>+ Add Equipment</Text>
-      </TouchableOpacity>
-
-      {items.length === 0 ? (
-        <Text style={styles.placeholder}>No equipment yet. Add your first one!</Text>
-      ) : (
-        items.map(item => (
-          <TouchableOpacity key={item.id} style={styles.card}
-            onPress={() => navigation.navigate('EditEquipment', { id: item.id, items, setItems })}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>{item.name}</Text>
-              <Text style={styles.badge}>{typeLabel(item.type)}</Text>
-              <Text style={{ color: '#4b5563', marginTop: 4 }}>{preview(item)}</Text>
-            </View>
+return (
+  <>
+    <FlatList
+      data={tasks}
+      keyExtractor={(item) => item.id}
+      contentContainerStyle={styles.container}
+      ListHeaderComponent={
+        <>
+          <Text style={styles.title}>Tasks</Text>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowModal(true)}>
+            <Text style={styles.primaryBtnText}>+ New Task</Text>
           </TouchableOpacity>
-        ))
+        </>
+      }
+      ListEmptyComponent={
+        <Text style={styles.placeholder}>No tasks yet. Create your first one!</Text>
+      }
+      renderItem={({ item }) => (
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate('EditTask', { id: item.id, tasks, setTasks })}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cardTitle}>{item.title}</Text>
+            <Text style={styles.badge}>
+              {item.type === 'one-time'
+                ? 'One-time'
+                : item.type === 'seasonal'
+                ? 'Seasonal'
+                : item.type === 'routine'
+                ? 'Routine'
+                : 'Follow-up'}
+            </Text>
+            <Text style={{ color: '#4b5563', marginTop: 4 }}>
+              Start: {isoToLocalDate(item.startISO)}
+              {item.recurrence !== 'once' ? `  •  ${describeRecurrence(item.recurrence)}` : ''}
+            </Text>
+          </View>
+        </TouchableOpacity>
       )}
+    />
 
-      <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Equipment</Text>
+    {/* Keep your existing New Task modal below */}
+    <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
+      <View style={styles.modalBackdrop}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>New Task</Text>
 
-            <TextInput style={styles.input} placeholder="Name (e.g., HVAC, Lawn Mower, F-150)"
-              value={name} onChangeText={setName} />
+          <TextInput
+            style={styles.input}
+            placeholder="Title (e.g., Change HVAC filter)"
+            value={title}
+            onChangeText={setTitle}
+          />
 
+          <View style={styles.pickerWrap}>
+            <Text style={{ marginBottom: 6, fontWeight: '600' }}>Task Type</Text>
+            <Picker selectedValue={taskType} onValueChange={setTaskType}>
+              <Picker.Item label="One-time" value="one-time" />
+              <Picker.Item label="Seasonal" value="seasonal" />
+              <Picker.Item label="Routine maintenance" value="routine" />
+              <Picker.Item label="Follow-up" value="follow-up" />
+            </Picker>
+          </View>
+
+          <TouchableOpacity style={styles.dateBtn} onPress={() => setShowCal(true)}>
+            <Text style={styles.dateBtnText}>Start date: {startDate.toLocaleDateString()}</Text>
+          </TouchableOpacity>
+
+          <Modal visible={showCal} transparent animationType="fade" onRequestClose={() => setShowCal(false)}>
+            <View style={styles.modalBackdrop}>
+              <View style={[styles.modalContent, { padding: 0 }]}>
+                <Calendar
+                  initialDate={startStr}
+                  markedDates={marked}
+                  onDayPress={(day) => { setStartDate(fromYmd(day.dateString)); setShowCal(false); }}
+                />
+                <View style={{ padding: 12, alignItems: 'flex-end' }}>
+                  <TouchableOpacity style={styles.ghostBtn} onPress={() => setShowCal(false)}>
+                    <Text style={styles.ghostBtnText}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+          {isRecurring && (
             <View style={styles.pickerWrap}>
-              <Text style={{ marginBottom: 6, fontWeight: '600' }}>Category</Text>
-              <Picker selectedValue={type} onValueChange={setType}>
-                <Picker.Item label="House" value="house" />
-                <Picker.Item label="Yard" value="yard" />
-                <Picker.Item label="Vehicle" value="vehicle" />
+              <Text style={{ marginBottom: 6, fontWeight: '600' }}>Repeat</Text>
+              <Picker selectedValue={recurrence} onValueChange={setRecurrence}>
+                <Picker.Item label="Weekly" value="weekly" />
+                <Picker.Item label="Biweekly" value="biweekly" />
+                <Picker.Item label="Monthly" value="monthly" />
+                <Picker.Item label="Quarterly" value="quarterly" />
+                <Picker.Item label="Every 6 months" value="every_6_months" />
+                <Picker.Item label="Annually" value="annually" />
+                <Picker.Item label="Every other year" value="every_other_year" />
               </Picker>
             </View>
+          )}
 
-            {type === 'vehicle' ? (
-              <>
-                <TextInput style={styles.input} placeholder="VIN" value={vin} autoCapitalize="characters" onChangeText={setVin} />
-                <TextInput style={styles.input} placeholder="Make (e.g., Ford)" value={make} onChangeText={setMake} />
-                <TextInput style={styles.input} placeholder="Model (e.g., F-150)" value={modelName} onChangeText={setModelName} />
-                <TextInput style={styles.input} placeholder="Year (e.g., 2018)" keyboardType="number-pad" value={year} onChangeText={setYear} />
-                <TextInput style={styles.input} placeholder="Engine (e.g., 5.0L V8)" value={engine} onChangeText={setEngine} />
-              </>
-            ) : (
-              <>
-                <TextInput style={styles.input} placeholder="Serial Number" value={serial} onChangeText={setSerial} />
-                <TextInput style={styles.input} placeholder="Manufacturer" value={manufacturer} onChangeText={setManufacturer} />
-                <TextInput style={styles.input} placeholder="Model" value={modelName} onChangeText={setModelName} />
-                <TextInput style={styles.input} placeholder="Year (e.g., 2020)" keyboardType="number-pad" value={year} onChangeText={setYear} />
-              </>
-            )}
-
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 4 }}>
-              <TouchableOpacity style={styles.ghostBtn} onPress={() => setShowModal(false)}>
-                <Text style={styles.ghostBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.primaryBtn} onPress={addEquipment}>
-                <Text style={styles.primaryBtnText}>Save</Text>
-              </TouchableOpacity>
-            </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
+            <TouchableOpacity style={styles.ghostBtn} onPress={() => setShowModal(false)}>
+              <Text style={styles.ghostBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.primaryBtn} onPress={addTask}>
+              <Text style={styles.primaryBtnText}>Save</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </Modal>
-    </ScrollView>
-  );
+      </View>
+    </Modal>
+  </>
+);
 }
